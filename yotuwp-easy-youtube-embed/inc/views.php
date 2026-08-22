@@ -627,6 +627,9 @@ class YotuViews{
 					<a href="#" data-tab="channel" data-yotu="insert"><?php _e('Channel', 'yotuwp-easy-youtube-embed');?></a>
 				</li>
 				<li>
+					<a href="#" data-tab="shorts" data-yotu="insert"><?php _e('Shorts', 'yotuwp-easy-youtube-embed');?></a>
+				</li>
+				<li>
 					<a href="#" data-tab="username" data-yotu="insert"><?php _e('Username', 'yotuwp-easy-youtube-embed');?></a>
 				</li>
 				<li>
@@ -638,6 +641,7 @@ class YotuViews{
 				<li>	
 					<a href="#" data-tab="keyword" data-yotu="insert"><?php _e('By Keyword', 'yotuwp-easy-youtube-embed');?></a>
 				</li>
+				
 			</ul>
 			<div class="yotu-tabs-content yotu-insert-popup">
 				<div class="yotu-tab-content" id="yotu-tab-playlist" data-type="playlist">
@@ -648,14 +652,21 @@ class YotuViews{
 					</div>
 				</div>
 				<div class="yotu-tab-content" id="yotu-tab-channel" data-type="channel">
-					<p><?php _e('Please enter channel URL for getting info. Then press Verify button to checking data.', 'yotuwp-easy-youtube-embed');?><br><em>Example: https://www.youtube.com/channel/UCANLZYMidaCbLQFWXBC95Jg</em></p>
+					<p><?php _e('Please enter channel URL for getting info. Then press Verify button to checking data.', 'yotuwp-easy-youtube-embed');?><br><em>Example: https://www.youtube.com/channel/UCANLZYMidaCbLQFWXBC95Jg <?php _e('or', 'yotuwp-easy-youtube-embed');?> https://www.youtube.com/@YotuWP</em></p>
+					<div class="yotu-input-url">
+						<input type="text" name="yotu-input-url" class="yotu-input-value"/>
+						<a href="#" class="yotu-button yotu-search-action"><?php _e('Verify', 'yotuwp-easy-youtube-embed');?></a>
+					</div>
+				</div>
+				<div class="yotu-tab-content" id="yotu-tab-shorts" data-type="shorts">
+					<p><?php _e('Please enter channel URL to list only its Shorts videos. Then press Verify button to checking data.', 'yotuwp-easy-youtube-embed');?><br><em>Example: https://www.youtube.com/@Samsung/shorts</p>
 					<div class="yotu-input-url">
 						<input type="text" name="yotu-input-url" class="yotu-input-value"/>
 						<a href="#" class="yotu-button yotu-search-action"><?php _e('Verify', 'yotuwp-easy-youtube-embed');?></a>
 					</div>
 				</div>
 				<div class="yotu-tab-content" id="yotu-tab-username" data-type="username">
-					<p><?php _e('Please enter username you want to get videos. Then press Verify button to checking data.', 'yotuwp-easy-youtube-embed');?><br>
+					<p><?php _e('Please enter username or handle (without @) you want to get videos. Then press Verify button to checking data.', 'yotuwp-easy-youtube-embed');?><br>
 						<em>Example: <br />OneDirectionVEVO</em>
 					</p>
 					<div class="yotu-input-url">
@@ -775,6 +786,7 @@ class YotuViews{
 
 			if ( isset( $settings['thumbratio'])) $classeses[] = ' yotu-thumb-'.$settings['thumbratio'];
 			if ( isset( $settings['template'])) $classeses[] = ' yotu-template-'.$settings['template'];
+			if ( !empty( $settings['is_shorts'])) $classeses[] = 'yotu-type-shorts';
 
 			$classes_attr = implode( ' ', $classeses );
 

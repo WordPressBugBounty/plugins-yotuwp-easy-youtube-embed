@@ -351,6 +351,25 @@ body .yotu-videos.yotu-mode-mix .yotu-video .yotu-video-thumb-wrp{
 	height: 0;
     box-shadow: 2px 2px 3px 0 rgba(10,10,10,.35);
 }
+/* type="shorts" galleries are 100% Shorts by construction (pulled from the
+channel's Shorts-only playlist), so the 9:16 frame is applied unconditionally
+here — no per-video oEmbed lookup needed for "large" mode. The shared popup
+player isn't nested inside this wrapper, so it still gets yotu-player-vertical
+toggled via JS (see check_aspect in frontend.js).
+Uses aspect-ratio instead of the padding-bottom % hack above: percentage padding
+resolves against the *containing block's* width (e.g. the 600px .yotu-wrapper-player),
+not this element's own max-width, so combining it with max-width:400px produced a
+box far taller than a real 9:16 frame. aspect-ratio sizes from this element's own
+resolved width instead, so it works correctly together with max-width. */
+.yotu-player.yotu-player-vertical,
+.yotu-type-shorts .yotu-player {
+	padding-bottom: 0;
+	height: auto;
+	aspect-ratio: 9 / 16;
+	max-width: 400px;
+	margin-left: auto;
+	margin-right: auto;
+}
 .yotu-player iframe {
 	position: absolute;
 	top: 0;
@@ -1013,8 +1032,8 @@ body .yotu-videos.yotu-preset-abnb .yotu-video-thumb-wrp div{
 body .yotu-videos.yotu-preset-abnb .yotu-video-title{
     color: #484848 !important;
     font-weight: 700 !important;
-    font-size: 17px;
-    line-height: 24px!important;
+    font-size: 14px;
+    line-height: 16px!important;
     padding-top: 8px;
     text-decoration: none;
     margin: 0 0 10px!important;
@@ -1024,7 +1043,7 @@ body .yotu-videos.yotu-preset-abnb .yotu-video-description{
     display: block;
     margin: 0!important;
     height: 3.2em;
-    font-size: 15px;
+    font-size: 13px;
     line-height: : 18px;
     color: #484848 !important;
 }

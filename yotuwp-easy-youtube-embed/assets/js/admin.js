@@ -121,7 +121,7 @@
 
 					var data = {}, val = that.find('.yotu-input-value').val().trim();
 					
-					if (['channel', 'playlist'].indexOf(type) > -1){
+					if (['channel', 'playlist', 'shorts'].indexOf(type) > -1){
 						data = yotu_wp.parse(val);
 					}else if (['videos'].indexOf(type) > -1) {
 						var lines = val.split('\n'),
@@ -141,14 +141,24 @@
 						data.valid = true;
 					}
 					 
-					if ( 
-						type == 'playlist' && 
+					if (
+						type == 'playlist' &&
 						data.type === 'video'
 					) {
 						if(typeof data.params.list !=='undefined'){
 							data.id = data.params.list;
 							data.type = 'playlist';
 						}else data.valid = false;
+					}
+
+					// Shorts tab takes the same channel URL/handle input as the
+					// Channel tab; once parse() resolves it to a channel id we
+					// just relabel it so the type check below passes.
+					if (
+						type == 'shorts' &&
+						data.type === 'channel'
+					) {
+						data.type = 'shorts';
 					}
 
 					yotu_wp.parse_data = data;
@@ -498,7 +508,7 @@
 
 			if ( regexYouTubeUrl.test(parser.hostname) ) {
 
-				var regexYouTubeType = /^\/(channel|user|playlist|watch|v|video|embed)/i,
+				var regexYouTubeType = /^\/(channel|user|playlist|watch|v|video|embed|shorts)/i,
 					typeCheck = regexYouTubeType.exec(parser.pathname);
 					
 				if ( typeCheck ) {
@@ -510,6 +520,9 @@
 						parsedUrl.type = "channel";
 					}else if ( ["playlist"].indexOf(typeCheck[1]) > -1 ) {
 						parsedUrl.type = "playlist";
+					}else if ( ["shorts"].indexOf(typeCheck[1].toLowerCase()) > -1 ) {
+						parsedUrl.type = "video";
+						parsedUrl.isShort = true;
 					}
 					 
 					// If we got a valid type, get the ID
@@ -519,6 +532,16 @@
 							channelCheck = regexYouTubeChannelId.exec(parser.pathname);
 
 						parsedUrl.id = channelCheck[1];
+					}
+
+					// Shorts carry the video ID as a path segment (/shorts/{id}), not a
+					// ?v= query param like watch/v/video/embed URLs.
+					else if ( parsedUrl.isShort ) {
+
+						var regexShortsId = /^\/shorts\/([^"&?/ ]+)/i,
+							shortsCheck = regexShortsId.exec(parser.pathname);
+
+						parsedUrl.id = shortsCheck ? shortsCheck[1] : '';
 					}
 
 					else if ( parsedUrl.type === "video" || parsedUrl.type === "playlist" ) {
@@ -547,6 +570,20 @@
 						}
 						
 						parsedUrl.normalized += parsedUrl.id;
+					}
+				}
+				// YouTube's newer handle URLs (e.g. youtube.com/@MrBeast or
+				// youtube.com/@MrBeast/shorts) don't start with one of the
+				// known path keywords above, so they need their own check.
+				else if ( /^\/@/.test(parser.pathname) ) {
+					var regexYouTubeHandle = /^\/(@[^\/?#]+)/,
+						handleCheck = regexYouTubeHandle.exec(parser.pathname);
+
+					if ( handleCheck ) {
+						parsedUrl.type = "channel";
+						parsedUrl.id = handleCheck[1];
+						parsedUrl.valid = true;
+						parsedUrl.normalized = "http://youtube.com/" + parsedUrl.id;
 					}
 				} else if (parser.hostname == 'youtu.be') {
 					parsedUrl.type = "video";

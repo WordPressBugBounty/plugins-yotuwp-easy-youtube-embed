@@ -3,7 +3,7 @@
 * Plugin Name: YotuWP - YouTube Gallery
 * Plugin URI: https://www.yotuwp.com/
 * Description: Easy embed YouTube playlist, channel, videos and user videos to posts/pages/widgets
-* Version: 1.3.14
+* Version: 1.4
 * Text Domain: yotuwp-easy-youtube-embed
 * Domain Path: /languages
 * Author URI: https://www.yotuwp.com/contact/
@@ -17,7 +17,7 @@ if( !defined( 'YTDS' ) )
 	define( 'YTDS', DIRECTORY_SEPARATOR );
 
 if( !defined( 'YOTUWP_VERSION' ) )
-	define( 'YOTUWP_VERSION', '1.3.14' );
+	define( 'YOTUWP_VERSION', '1.4' );
 
 global $yotuwp, $yotuwp_inline_script;
 
@@ -528,7 +528,9 @@ class YotuWP{
 
 			if( is_array( $response) && isset( $response['body'] ) ) {
 				$obj = json_decode( $response['body'] );
-				$msg = $obj->error->message;
+				if ( isset( $obj->error->message ) ) {
+					$msg = $obj->error->message;
+				}
 			}
 
 			if( isset( $response->errors) && isset( $response->errors['http_request_failed'] ) ) {
@@ -580,10 +582,12 @@ class YotuWP{
 
 			case 'channel':
 
-				//find playlist id from channel 
-				$url = 'https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id='.$atts['id'];
+				//find playlist id from channel; a "@handle" id (YouTube's newer
+				//handle URLs) needs forHandle instead of the id param
+				$channel_id_param = ( strpos( $atts['id'], '@' ) === 0 ) ? 'forHandle=' . $atts['id'] : 'id=' . $atts['id'];
+				$url = 'https://www.googleapis.com/youtube/v3/channels?part=contentDetails&'. $channel_id_param;
 				$data = $this->load_content( $url);
-				
+
 				if( !is_array( $data) ) {
 					//print_r($data);
 					$playlist 		= $data->items[0]->contentDetails->relatedPlaylists->uploads;
@@ -596,13 +600,53 @@ class YotuWP{
 
 				break;
 
+			case 'shorts':
+
+				//find the channel's real UC... id first, resolving a "@handle" if needed
+				$channel_id = $atts['id'];
+
+				if ( strpos( $channel_id, '@' ) === 0 ) {
+					$url  = 'https://www.googleapis.com/youtube/v3/channels?part=id&forHandle='. $channel_id;
+					$resp = $this->load_content( $url );
+
+					$channel_id = ( !is_array( $resp) && !empty( $resp->items ) ) ? $resp->items[0]->id : '';
+				}
+
+				if ( strpos( $channel_id, 'UC' ) === 0 ) {
+					// YouTube doesn't expose a "shorts" playlist via contentDetails
+					// like it does for "uploads"; it does however keep a stable,
+					// undocumented Shorts-only playlist per channel that follows
+					// the same UC -> UU convention used for uploads: UC... -> UUSH...
+					$playlist = 'UUSH' . substr( $channel_id, 2 );
+					$api_url  = 'https://www.googleapis.com/youtube/v3/playlistItems?part=id,snippet,contentDetails,status&maxResults='.$atts['per_page'].'&playlistId='. $playlist;
+
+					$atts['type']      = 'playlist';
+					$atts['id']        = $playlist;
+					// "type" gets overwritten to "playlist" above so the rest of this
+					// function can fetch it like any other playlist; this flag keeps
+					// the "every video here is a Short" fact around for the front-end
+					// (views.php reads it to add a class that forces the 9:16 player
+					// frame immediately, without needing a per-video oEmbed lookup).
+					$atts['is_shorts'] = true;
+				}
+
+				break;
+
 			case 'username':
 
-				//find playlist id from channel 
-				$url = 'https://www.googleapis.com/youtube/v3/channels?part=contentDetails&forUsername='.$atts['id'];
+				//find playlist id from channel; newer channels never had a legacy
+				//"username" (forUsername), only an auto-assigned "handle", so try
+				//forHandle first and fall back to forUsername for older channels.
+				//The API only accepts one of these filters per request.
+				$url  = 'https://www.googleapis.com/youtube/v3/channels?part=contentDetails&forHandle='.$atts['id'];
 				$data = $this->load_content( $url);
 
-				if( !is_array( $data) ) {
+				if( is_array( $data) || empty( $data->items ) ) {
+					$url  = 'https://www.googleapis.com/youtube/v3/channels?part=contentDetails&forUsername='.$atts['id'];
+					$data = $this->load_content( $url);
+				}
+
+				if( !is_array( $data) && !empty( $data->items ) ) {
 					$playlist = $data->items[0]->contentDetails->relatedPlaylists->uploads;
 					$api_url  = 'https://www.googleapis.com/youtube/v3/playlistItems?part=id,snippet,contentDetails,status&maxResults='.$atts['per_page'].'&playlistId='. $playlist;
 
@@ -656,7 +700,12 @@ class YotuWP{
 				break;
 
 			case 'channel':
-				$api_url = 'https://www.googleapis.com/youtube/v3/search?type=channel&part=snippet,id&channelId='. $data;
+			case 'shorts':
+				if ( strpos( $data, '@' ) === 0 ) {
+					$api_url = 'https://www.googleapis.com/youtube/v3/channels?part=snippet,id&forHandle='. $data;
+				} else {
+					$api_url = 'https://www.googleapis.com/youtube/v3/search?type=channel&part=snippet,id&channelId='. $data;
+				}
 				break;
 
 			case 'videos':
@@ -664,8 +713,19 @@ class YotuWP{
 				break;
 
 			case 'username':
-				$api_url = 'https://www.googleapis.com/youtube/v3/channels?part=contentDetails,snippet,id&forUsername='. $data;
-				break;
+				//newer channels never had a legacy "username" (forUsername), only
+				//an auto-assigned "handle", so try forHandle first and fall back
+				//to forUsername for older channels. The API only accepts one of
+				//these filters per request, so this needs its own round trip
+				//instead of a single shared $api_url below.
+				$resp = $this->load_content( 'https://www.googleapis.com/youtube/v3/channels?part=contentDetails,snippet,id&forHandle='. $data );
+
+				if ( is_array( $resp ) || empty( $resp->items ) ) {
+					$resp = $this->load_content( 'https://www.googleapis.com/youtube/v3/channels?part=contentDetails,snippet,id&forUsername='. $data );
+				}
+
+				wp_send_json( $resp );
+				return;
 
 			case 'keyword':
 				$api_url = 'https://www.googleapis.com/youtube/v3/search?type=video&part=snippet,id&q='. $data;
@@ -1196,6 +1256,12 @@ class YotuWP{
 			update_user_meta( $user_id, 'yotuwp_scgen_ignore_notice', true);
 		}
 
+		if (isset( $_GET['yotuwp_cache_ignore_notice'] ) ) {
+			update_user_meta( $user_id, 'yotuwp_cache_ignore_notice', true);
+			wp_redirect( $_SERVER['HTTP_REFERER'] );
+			exit;
+		}
+
 	}
 
 	function admin_notice() {
@@ -1240,6 +1306,54 @@ class YotuWP{
 				</ul>
 			</div>';
 		}
+
+		$this->cache_notice();
+	}
+
+	// Caching (YotuWP > General Settings > API > Cache) is off by default so a
+	// site owner can watch video changes take effect immediately while setting
+	// the gallery up. This nudges them to turn it on once the site — and the
+	// gallery's video list — has settled, instead of silently changing the
+	// default for everyone. Reuses the same install-date + dismiss pattern as
+	// the rating notice above.
+	function cache_notice() {
+		global $current_user;
+
+		if ( !current_user_can( 'manage_options' ) ) return;
+
+		$cache = get_option( 'yotu-cache' );
+		if ( isset( $cache['enable'] ) && $cache['enable'] == 'on' ) return;
+
+		$user_id      = $current_user->ID;
+		$install_date = get_option( 'yotuwp_install_date', '' );
+		if ( empty( $install_date ) ) return;
+
+		$install_date = date_create( $install_date );
+		$date_now     = date_create( date( 'Y-m-d G:i:s' ) );
+		$date_diff    = date_diff( $install_date, $date_now );
+
+		// Two weeks is enough time to finish setting up a gallery and see
+		// video changes reflected live before nudging toward caching.
+		if ( $date_diff->format("%a") < 14 ) {
+			return;
+		}
+
+		if ( get_user_meta( $user_id, 'yotuwp_cache_ignore_notice', true ) ) return;
+
+		echo '<div class="updated">
+			<div class="yotu-notice-logo"></div>
+			<p>Your YotuWP gallery has been running for a couple of weeks now. If you\'re done tweaking layouts and video sources, turning on caching (<a href="admin.php?page=yotuwp#api">YotuWP &gt; General Settings &gt; API &gt; Cache</a>) reduces YouTube API calls on every page view and speeds up your gallery.</p>
+			<ul class="yotu-rating-notice">
+				<li>
+					<span class="dashicons dashicons-external"></span>
+					<a href="admin.php?page=yotuwp#api">Take me to the cache setting</a>
+				</li>
+				<li>
+					<span class="dashicons dashicons-dismiss"></span>
+					<a href="admin.php?page=yotuwp&yotuwp_cache_ignore_notice=yes">Never show again</a>
+				</li>
+				</ul>
+			</div>';
 	}
 
 	public function lang_cfg() {

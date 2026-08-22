@@ -76,6 +76,7 @@
 								}
 							}
 						});
+						yotuwp.player.check_aspect(player, firstId, settings.is_shorts);
 					}
 
 					//find thumbs
@@ -203,9 +204,52 @@
 			data : {
 			},
 			current : {
-				'player' : null,	
+				'player' : null,
 				'video' : null,
 				'list' : null
+			},
+
+			// Shorts (and any other portrait/vertical video) render squeezed inside the
+			// player's default 16:9 frame. There's no reliable "is this a Short" flag on
+			// the video objects this plugin already has (Data API v3 doesn't expose one),
+			// so orientation is checked directly against YouTube's oEmbed endpoint. This
+			// MUST query the /shorts/{id} URL form specifically: confirmed by direct
+			// testing, oEmbed only reports the true 9:16 dimensions there — the same
+			// video queried via /watch?v= always reports the generic 200x113 (16:9)
+			// embed box regardless of its real orientation. Toggles yotu-player-vertical
+			// on the player's wrapper so CSS can switch the aspect box.
+			aspect_cache : {},
+
+			check_aspect : function (playerId, videoId, isShorts) {
+				var wrp = $('#yotu-player-' + playerId).closest('.yotu-player');
+
+				if ( !videoId || !wrp.length ) return;
+
+				// Galleries built from the "Shorts" source type are 100% Shorts by
+				// construction, so skip the oEmbed round trip entirely. "Large" mode
+				// already gets the 9:16 frame instantly via the .yotu-type-shorts CSS
+				// rule; the shared, page-level lightbox modal isn't nested inside that
+				// wrapper though, so it still needs the class set here.
+				if ( isShorts ) {
+					wrp.addClass('yotu-player-vertical');
+					return;
+				}
+
+				if ( typeof yotuwp.player.aspect_cache[videoId] !== 'undefined' ) {
+					wrp.toggleClass('yotu-player-vertical', yotuwp.player.aspect_cache[videoId]);
+					return;
+				}
+
+				$.getJSON(
+					'https://www.youtube.com/oembed?format=json&url=' +
+					encodeURIComponent('https://www.youtube.com/shorts/' + videoId)
+				).done(function (data) {
+					var vertical = !!(data && data.height && data.width && data.height > data.width);
+					yotuwp.player.aspect_cache[videoId] = vertical;
+					wrp.toggleClass('yotu-player-vertical', vertical);
+				}).fail(function () {
+					wrp.removeClass('yotu-player-vertical');
+				});
 			},
 
 			play : function (video, list) {
@@ -231,6 +275,7 @@
 						var playtimer = setInterval(function (){
 							if (typeof yotuwp.data.players[player]['loadVideoById'] == 'function') {
 								yotuwp.data.players[player].loadVideoById(video);
+								yotuwp.player.check_aspect(player, video, settings.is_shorts);
 								var pos =  list.offset().top - settings.player.scrolling;
 								
 								if ( settings.player.scrolling == 0 ) {
@@ -356,8 +401,10 @@
 								}
 							}
 						});
+						yotuwp.player.check_aspect('modal', video, settings.is_shorts);
 					} else {
 						yotuwp.data.players['modal'].loadVideoById(video);
+						yotuwp.player.check_aspect('modal', video, settings.is_shorts);
 					}
 
 					if (settings.player.playing) {
@@ -494,8 +541,10 @@
 
 				play_video : function (e){
 					e.preventDefault();
-					var video = $(e.target).data('videoid');
+					var video = $(e.target).data('videoid'),
+						settings = yotuwp.helper.settings(yotuwp.player.current.list);
 					yotuwp.data.players['modal'].loadVideoById(video);
+					yotuwp.player.check_aspect('modal', video, settings.is_shorts);
 					yotuwp.player.current.video = video;
 					yotuwp.player.info();
 				},
@@ -579,6 +628,7 @@
 					if(yotuwp.player.current.player === 'modal'){
 
 						yotuwp.data.players['modal'].loadVideoById(nextvideo);
+						yotuwp.player.check_aspect('modal', nextvideo, settings.is_shorts);
 						yotuwp.player.current.video = nextvideo;
 						yotuwp.player.info();
 					} else $(yotuwp.player.current.list).find('[data-videoid='+nextvideo+']').trigger('click');

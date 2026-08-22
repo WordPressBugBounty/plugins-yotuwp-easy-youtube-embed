@@ -1,9 +1,9 @@
 === Video Gallery - YouTube Playlist, Channel Gallery by YotuWP ===
 Contributors: yotuwp
-Tags: youtube channel, youtube gallery, youtube playlist, youtube videos, youtube embed, video gallery responsive, yotu, youtube lightbox, youtube wordpress plugin, channel gallery, playlist gallery
+Tags: youtube gallery, youtube channel, youtube playlist, youtube embed, youtube shorts
 Requires at least: 4.5
-Tested up to: 6.2
-Stable tag: 1.3.13
+Tested up to: 7.1
+Stable tag: 1.4
 Donate link: https://www.paypal.me/tuongpg
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -113,6 +113,15 @@ Please go to setting tab YotuWP > General > Video Thumbnail Ratio
 Then select value 'HD - 16:9' then press Save Change and try out it.
 
 == Changelog ==
+= 1.4 - Aug 23rd, 2026 =
+* [Fix] Compatibility with recent WordPress and PHP versions
+* [Add] YouTube Shorts URL support (Shortcode Generator + video-replacement)
+* [Add] New "Shorts" source type in the Shortcode Generator to list a channel's Shorts only
+* [Add] Support for YouTube's "@handle" channel URLs (e.g. youtube.com/@YotuWP) in the Channel/Shorts source types
+* [Fix] "Username" source type now also resolves newer channels that only have a handle and never had a legacy YouTube username
+* [Fix] Video player forced to a 16:9 frame regardless of the video's actual aspect ratio. "Shorts" source-type galleries now switch to 9:16 immediately (no lookup needed — every video in them is a Short by construction), using CSS aspect-ratio rather than the old padding-bottom-percentage hack (which resolves against the parent's width, not the player's own max-width, and rendered the frame too tall once a max-width was applied). A single Shorts video embedded elsewhere (Single/Multi Videos, or a portrait video mixed into a regular gallery) is still detected per-video via YouTube's oEmbed endpoint, queried with the /shorts/{id} URL — the /watch?v= form YouTube's oEmbed used previously always reports the generic 16:9 embed box regardless of the video's real orientation
+* [Add] Admin notice suggesting caching once a site's video list has stabilized
+
 = 1.3.14 - Jun 25th, 2024 =
 * Fix security issue
 
