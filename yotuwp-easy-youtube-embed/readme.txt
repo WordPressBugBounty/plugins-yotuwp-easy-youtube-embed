@@ -3,7 +3,7 @@ Contributors: yotuwp
 Tags: youtube gallery, youtube channel, youtube playlist, youtube embed, youtube shorts
 Requires at least: 4.5
 Tested up to: 7.1
-Stable tag: 1.4
+Stable tag: 1.4.2
 Donate link: https://www.paypal.me/tuongpg
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -113,6 +113,14 @@ Please go to setting tab YotuWP > General > Video Thumbnail Ratio
 Then select value 'HD - 16:9' then press Save Change and try out it.
 
 == Changelog ==
+= 1.4.2 - Oct 13th, 2026 =
+* [Fix] "Enable Tracking" now uses double opt-in — a confirmation email (sent via your own site's mail, never through our marketing system) must be clicked before this address is added to anything, from both the admin notice and the General Settings > API toggle (the toggle used to subscribe the address immediately on save, with no confirmation at all)
+* [Fix] Tracking opt-in notice/setting copy now says plainly that opting in also means occasional product update/offer emails, not just anonymous usage data
+
+= 1.4.1 - Sept 14th, 2026 =
+* [Fix] Deleted/private videos in a playlist no longer render as broken/empty items in the List and Mix layouts (they were already filtered in Grid and the Pro layouts, but List and Mix never called the filter)
+* [Fix] The private-video check read YouTube API's privacyStatus field from the wrong path (nested under snippet instead of top-level) so it never actually matched; now reads the correct path and also checks for YouTube's own "Private video"/"Deleted video" placeholder titles as a fallback, since a fully deleted video can drop the status field from the API response entirely
+
 = 1.4 - Aug 23rd, 2026 =
 * [Fix] Compatibility with recent WordPress and PHP versions
 * [Add] YouTube Shorts URL support (Shortcode Generator + video-replacement)

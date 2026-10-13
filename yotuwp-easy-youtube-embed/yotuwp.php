@@ -3,7 +3,7 @@
 * Plugin Name: YotuWP - YouTube Gallery
 * Plugin URI: https://www.yotuwp.com/
 * Description: Easy embed YouTube playlist, channel, videos and user videos to posts/pages/widgets
-* Version: 1.4
+* Version: 1.4.2
 * Text Domain: yotuwp-easy-youtube-embed
 * Domain Path: /languages
 * Author URI: https://www.yotuwp.com/contact/
@@ -17,7 +17,7 @@ if( !defined( 'YTDS' ) )
 	define( 'YTDS', DIRECTORY_SEPARATOR );
 
 if( !defined( 'YOTUWP_VERSION' ) )
-	define( 'YOTUWP_VERSION', '1.4' );
+	define( 'YOTUWP_VERSION', '1.4.2' );
 
 global $yotuwp, $yotuwp_inline_script;
 
@@ -1102,9 +1102,16 @@ class YotuWP{
 	}
 
 	public function is_private( $video ){
-		if ( 
+		// "status" is a top-level sibling of "snippet" in the playlistItem resource,
+		// not nested under it (confirmed against the YouTube Data API v3 docs) — the
+		// previous $video->snippet->status->privacyStatus check always read an unset
+		// path and never actually fired. Title-text is checked too since a genuinely
+		// deleted (not just private) video may drop "status" from the response
+		// entirely, leaving the placeholder title as the only reliable signal left.
+		if (
 			!isset($video->snippet->thumbnails) ||
-			( isset($video->snippet->status) && $video->snippet->status->privacyStatus == 'private')
+			( isset($video->status) && $video->status->privacyStatus == 'private') ||
+			( isset($video->snippet->title) && in_array( $video->snippet->title, array( 'Private video', 'Deleted video' ), true) )
 		) return true;
 		return false;
 	}
@@ -1433,9 +1440,23 @@ class YotuWP{
 			}
 
 			if ($tab == 'api') {
-				if (isset($args[1]['tracking']) && $args[1]['tracking'] == 'on')
-					update_option( 'yotuwp_allow_tracking', true );
-				else update_option( 'yotuwp_allow_tracking', false );
+				$now_on   = isset($args[1]['tracking']) && $args[1]['tracking'] == 'on';
+				$was_on   = get_option( 'yotuwp_allow_tracking', false );
+
+				if ( $now_on && !$was_on ) {
+					// Same weak-consent problem as the admin-notice banner: a toggle
+					// flipped on a settings tab (maybe while saving something else
+					// entirely, like the API key) is not confirmed proof a human
+					// wants tracking/marketing emails. Route through the same
+					// double opt-in confirmation email instead of subscribing
+					// immediately — see PB_SDK_Tracking::request_optin_confirmation().
+					global $ytwp_tracking;
+					if ( $ytwp_tracking ) {
+						$ytwp_tracking->request_optin_confirmation();
+					}
+				} elseif ( !$now_on ) {
+					update_option( 'yotuwp_allow_tracking', false );
+				}
 			}
 			
 			if ($custom_css !== '') {

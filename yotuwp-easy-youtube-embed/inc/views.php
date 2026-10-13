@@ -489,7 +489,7 @@ class YotuViews{
 						'default'		=> 'off',
 						'priority' 		=> 60,
 						'value'			=> (false !== $allow_tracking)? 'on' : 'off',
-						'description'	=> __('Allow <strong>YotuWP - YouTube Gallery</strong> to track plugin usage? Become a contributor by opting in to our anonymous data tracking. We guarantee no sensitive data is collected.', 'yotuwp-easy-youtube-embed'),
+						'description'	=> __('Allow <strong>YotuWP - YouTube Gallery</strong> to track plugin usage and send this email address occasional product update/offer emails? We will email a confirmation link before anything activates, and you can unsubscribe from emails at any time.', 'yotuwp-easy-youtube-embed'),
 					),
 				)
 			);

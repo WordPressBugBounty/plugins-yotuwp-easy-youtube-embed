@@ -12,6 +12,7 @@ $video_classes = apply_filters( 'yotu_video_classes', array("yotu-video"), $sett
 		if (is_object($data) && $total >0 ):
 			$count = 0;
 			foreach($data->items as $video){
+				if ( $yotuwp->is_private($video) ) continue;
 
 				$videoId = YotuWP::getVideoId($video);
 				$thumb = yotuwp_video_thumb($video);
