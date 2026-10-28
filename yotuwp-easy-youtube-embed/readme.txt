@@ -3,7 +3,7 @@ Contributors: yotuwp
 Tags: youtube gallery, youtube channel, youtube playlist, youtube embed, youtube shorts
 Requires at least: 4.5
 Tested up to: 7.1
-Stable tag: 1.4.2
+Stable tag: 1.4.3
 Donate link: https://www.paypal.me/tuongpg
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -113,6 +113,9 @@ Please go to setting tab YotuWP > General > Video Thumbnail Ratio
 Then select value 'HD - 16:9' then press Save Change and try out it.
 
 == Changelog ==
+= 1.4.3 - Oct 28th, 2026 =
+* [Fix] "Translation loading for the yotuwp-easy-youtube-embed domain was triggered too early" notice (WordPress 6.7+): translation setup was running in the plugin constructor and on the `plugins_loaded` hook, both before WordPress is ready for it. Moved to the `init` hook, as WordPress now requires.
+
 = 1.4.2 - Oct 13th, 2026 =
 * [Fix] "Enable Tracking" now uses double opt-in — a confirmation email (sent via your own site's mail, never through our marketing system) must be clicked before this address is added to anything, from both the admin notice and the General Settings > API toggle (the toggle used to subscribe the address immediately on save, with no confirmation at all)
 * [Fix] Tracking opt-in notice/setting copy now says plainly that opting in also means occasional product update/offer emails, not just anonymous usage data

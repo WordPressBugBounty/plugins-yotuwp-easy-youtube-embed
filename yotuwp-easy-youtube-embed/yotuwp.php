@@ -3,7 +3,7 @@
 * Plugin Name: YotuWP - YouTube Gallery
 * Plugin URI: https://www.yotuwp.com/
 * Description: Easy embed YouTube playlist, channel, videos and user videos to posts/pages/widgets
-* Version: 1.4.2
+* Version: 1.4.3
 * Text Domain: yotuwp-easy-youtube-embed
 * Domain Path: /languages
 * Author URI: https://www.yotuwp.com/contact/
@@ -17,7 +17,7 @@ if( !defined( 'YTDS' ) )
 	define( 'YTDS', DIRECTORY_SEPARATOR );
 
 if( !defined( 'YOTUWP_VERSION' ) )
-	define( 'YOTUWP_VERSION', '1.4.2' );
+	define( 'YOTUWP_VERSION', '1.4.3' );
 
 global $yotuwp, $yotuwp_inline_script;
 
@@ -207,13 +207,15 @@ class YotuWP{
 			
 		}, 10, 3);
 
-		add_action( 'plugins_loaded', array( $this, 'textdomain' ) );
+		// WP 6.7+: translations must load on init or later. Priority 1/2 keeps
+		// these ahead of this constructor's other init-hooked methods (default
+		// priority 10) that rely on translations/$this->lang being ready.
+		add_action( 'init', array( $this, 'textdomain' ), 1 );
+		add_action( 'init', array( $this, 'lang_cfg' ), 2 );
 		add_action( 'yotuwp_cache_event', array( $this, 'clear_cache' ), 10);
 
 		register_activation_hook(__FILE__,array( $this, 'activation' ) );
 		register_deactivation_hook(__FILE__, array( $this, 'deactivation' ) );
-
-		$this->lang_cfg();
 
 		do_action( 'yotu_init' );
 	}
